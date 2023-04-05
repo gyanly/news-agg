@@ -9,7 +9,8 @@ from datetime import datetime
 
 def article_list(request):
     articles = Article.objects.all()
-    return render(request, 'news/article_list.html',{'articles':articles})
+    rows = [articles[x:x+1] for x in range(0,len(articles),1)]
+    return render(request, 'news/article_list.html',{'rows':rows})
 
 def feed_list(request):
     feeds = Feed.objects.all()
@@ -20,21 +21,24 @@ def new_feed(request):
         form =FeedForm(request.POST)
         if form.is_valid():
             feed = form.save(commit= False)
-            feedData = feedparser.parse(feed.url)
-            # set some filed
-            feed.title = feedData.feed.title
-            feed.save()
             
-            
-            for entry in feedData.entries:
-                article = Article()
-                article.title = entry.title
-                article.url = entry.link
-                article.description = entry.description
-                d = datetime(*(entry.published_parsed[0:6]))
-                article.publication_date = d.strftime('%Y-%m-%d %H:%M:%S') 
-                article.feed = feed
-                article.save()  
+            existingFeed = Feed.objects.filter(url = feed.url)
+            if len(existingFeed) == 0:
+                feedData = feedparser.parse(feed.url)
+                # set some filed
+                feed.title = feedData.feed.title
+                feed.save()
+                
+                
+                for entry in feedData.entries:
+                    article = Article()
+                    article.title = entry.title
+                    article.url = entry.link
+                    article.description = entry.description
+                    d = datetime(*(entry.published_parsed[0:6]))
+                    article.publication_date = d.strftime('%Y-%m-%d %H:%M:%S') 
+                    article.feed = feed
+                    article.save()  
             
             return redirect('/news/feeds/')
     else:
